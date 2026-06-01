@@ -22,8 +22,9 @@ type Sprint = {
 };
 
 type SprintStory = {
-  id: string; title: string; type: string; sp: number;
+  id: string; title: string; type: string;
   hours: number; hoursLogged: number; assignee: string; status: string;
+  attachedStoryId?: string;
 };
 
 const SPRINT_PROGRESS = [
@@ -58,10 +59,10 @@ const initialSprints: Sprint[] = [
     capacity: 80, allocated: 76, velocity: 32, status: "Active", boardType: "Scrum",
     linkedMilestones: ["MVP Release"], linkedEpics: ["E-01"], linkedStories: ["S-01", "S-02"], linkedTasks: ["T-101"],
     stories: [
-      { id: "S-01", title: "User registration flow", type: "Story", sp: 5, hours: 20, hoursLogged: 18, assignee: "Rahul S.", status: "In Progress" },
-      { id: "S-02", title: "JWT authentication", type: "Story", sp: 3, hours: 12, hoursLogged: 12, assignee: "Priya M.", status: "Done" },
-      { id: "T-01", title: "CI/CD setup", type: "Task", sp: 3, hours: 10, hoursLogged: 6, assignee: "Amit K.", status: "In Progress" },
-      { id: "B-01", title: "Login redirect bug", type: "Bug", sp: 1, hours: 4, hoursLogged: 4, assignee: "Sneha R.", status: "Done" },
+      { id: "S-01", title: "User registration flow", type: "Story", hours: 20, hoursLogged: 18, assignee: "Rahul S.", status: "In Progress" },
+      { id: "S-02", title: "JWT authentication", type: "Story", hours: 12, hoursLogged: 12, assignee: "Priya M.", status: "Done" },
+      { id: "T-01", title: "CI/CD setup", type: "Task", hours: 10, hoursLogged: 6, assignee: "Amit K.", status: "In Progress", attachedStoryId: "S-01" },
+      { id: "B-01", title: "Login redirect bug", type: "Bug", hours: 4, hoursLogged: 4, assignee: "Sneha R.", status: "Done", attachedStoryId: "S-02" },
     ],
   },
   {
@@ -69,8 +70,8 @@ const initialSprints: Sprint[] = [
     capacity: 80, allocated: 45, velocity: 32, status: "Planned", boardType: "Scrum",
     linkedMilestones: ["MVP Release", "Beta Launch"], linkedEpics: ["E-01", "E-02"], linkedStories: ["S-03"], linkedTasks: ["T-109"],
     stories: [
-      { id: "S-03", title: "Admin role management", type: "Story", sp: 8, hours: 32, hoursLogged: 0, assignee: "Rahul S.", status: "To Do" },
-      { id: "R-01", title: "Redis evaluation", type: "R&N", sp: 5, hours: 13, hoursLogged: 0, assignee: "Vikram P.", status: "To Do" },
+      { id: "S-03", title: "Admin role management", type: "Story", hours: 32, hoursLogged: 0, assignee: "Rahul S.", status: "To Do" },
+      { id: "R-01", title: "Redis evaluation", type: "R&N", hours: 13, hoursLogged: 0, assignee: "Vikram P.", status: "To Do" },
     ],
   },
   {
@@ -84,6 +85,7 @@ const initialSprints: Sprint[] = [
 const typeColors: Record<string, string> = {
   Story: "bg-blue-100 text-blue-700", Bug: "bg-red-100 text-red-700",
   Task: "bg-purple-100 text-purple-700", "R&N": "bg-yellow-100 text-yellow-700",
+  Epic: "bg-orange-100 text-orange-700",
 };
 const statusColors: Record<string, string> = {
   "To Do": "bg-slate-100 text-slate-600", "In Progress": "bg-blue-100 text-blue-700", Done: "bg-green-100 text-green-700",
@@ -94,11 +96,20 @@ const boardTypeStyle: Record<BoardType, string> = {
   Waterfall: "bg-amber-100 text-amber-700",
 };
 
+const BLANK_ITEM = { title: "", type: "Story", hours: 8, assignee: "", status: "To Do", attachedStoryId: "" };
+
 export default function PlanningPage() {
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
   const [selectedSprint, setSelectedSprint] = useState<Sprint>(initialSprints[0]);
   const [showNewSprintForm, setShowNewSprintForm] = useState(false);
   const [newSprint, setNewSprint] = useState({ name: "", startDate: "", endDate: "", capacity: 80, boardType: "Scrum" as BoardType });
+
+  // Add item form
+  const [showAddItemForm, setShowAddItemForm] = useState(false);
+  const [newItem, setNewItem] = useState({ ...BLANK_ITEM });
+
+  // Item detail modal
+  const [selectedItem, setSelectedItem] = useState<SprintStory | null>(null);
 
   // Link items modal
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -121,6 +132,28 @@ export default function PlanningPage() {
     setSelectedSprint(sp);
     setShowNewSprintForm(false);
     setNewSprint({ name: "", startDate: "", endDate: "", capacity: 80, boardType: "Scrum" });
+  };
+
+  const addSprintItem = () => {
+    if (!newItem.title.trim()) return;
+    const prefix = newItem.type === "Story" ? "S" : newItem.type === "Bug" ? "B" : "T";
+    const item: SprintStory = {
+      id: `${prefix}-${Date.now().toString().slice(-4)}`,
+      title: newItem.title,
+      type: newItem.type,
+      hours: newItem.hours,
+      hoursLogged: 0,
+      assignee: newItem.assignee,
+      status: "To Do",
+      attachedStoryId: newItem.attachedStoryId || undefined,
+    };
+    const updatedSprints = sprints.map((s) =>
+      s.id === selectedSprint.id ? { ...s, stories: [...s.stories, item] } : s
+    );
+    setSprints(updatedSprints);
+    setSelectedSprint(updatedSprints.find((s) => s.id === selectedSprint.id)!);
+    setNewItem({ ...BLANK_ITEM });
+    setShowAddItemForm(false);
   };
 
   const openLinkModal = () => {
@@ -193,7 +226,6 @@ export default function PlanningPage() {
               value={newSprint.capacity} onChange={(e) => setNewSprint((p) => ({ ...p, capacity: Number(e.target.value) }))} />
           </div>
 
-          {/* Board Type Step */}
           <div>
             <div className="text-sm font-medium text-slate-700 mb-2">Select Board Type for this Sprint</div>
             <div className="grid grid-cols-3 gap-3">
@@ -230,7 +262,7 @@ export default function PlanningPage() {
           const over = sp.allocated > sp.capacity;
           const isSelected = selectedSprint.id === sp.id;
           return (
-            <button key={sp.id} onClick={() => setSelectedSprint(sp)}
+            <button key={sp.id} onClick={() => { setSelectedSprint(sp); setShowAddItemForm(false); }}
               className={`text-left p-4 rounded-xl border-2 transition-all ${
                 over
                   ? isSelected ? "border-red-500 bg-red-50" : "border-red-300 bg-red-50 hover:border-red-500"
@@ -275,154 +307,216 @@ export default function PlanningPage() {
         </div>
       )}
 
-      {/* Sprint Detail */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-700">{selectedSprint.name} – Task Breakdown</h3>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${boardTypeStyle[selectedSprint.boardType]}`}>{selectedSprint.boardType}</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Milestones: {selectedSprint.linkedMilestones.length > 0 ? selectedSprint.linkedMilestones.join(", ") : "None linked"}
-              </p>
+      {/* ── Sprint Detail — Full Width ── */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-slate-700">{selectedSprint.name} – Task Breakdown</h3>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${boardTypeStyle[selectedSprint.boardType]}`}>{selectedSprint.boardType}</span>
             </div>
-            <div className="flex gap-2">
-              <button onClick={openLinkModal}
-                className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                🔗 Link Items
-              </button>
-              <button className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">+ Add Story</button>
-            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Milestones: {selectedSprint.linkedMilestones.length > 0 ? selectedSprint.linkedMilestones.join(", ") : "None linked"}
+            </p>
           </div>
-
-          {/* Linked items summary */}
-          {(selectedSprint.linkedEpics.length > 0 || selectedSprint.linkedStories.length > 0 || selectedSprint.linkedTasks.length > 0) && (
-            <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex flex-wrap gap-1.5">
-              {selectedSprint.linkedEpics.map((eid) => {
-                const epic = ALL_EPICS.find((e) => e.id === eid);
-                return epic ? (
-                  <span key={eid} className="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700 border border-orange-200">🏔 {epic.title}</span>
-                ) : null;
-              })}
-              {selectedSprint.linkedStories.map((sid) => {
-                const story = ALL_STORIES.find((s) => s.id === sid);
-                return story ? (
-                  <span key={sid} className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 border border-blue-200">📖 {story.id}</span>
-                ) : null;
-              })}
-              {selectedSprint.linkedTasks.map((tid) => {
-                const task = ALL_TASKS.find((t) => t.id === tid);
-                return task ? (
-                  <span key={tid} className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 border border-purple-200">✓ {task.id}</span>
-                ) : null;
-              })}
-            </div>
-          )}
-
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-400 bg-slate-50 border-b border-slate-100">
-                <th className="text-left px-4 py-2">ID</th>
-                <th className="text-left px-4 py-2">Title</th>
-                <th className="text-left px-4 py-2">Type</th>
-                <th className="text-left px-4 py-2">SP</th>
-                <th className="text-left px-4 py-2">Est. Hrs</th>
-                <th className="text-left px-4 py-2">Logged</th>
-                <th className="text-left px-4 py-2">Status</th>
-                <th className="text-left px-4 py-2">Assignee</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedSprint.stories.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-8 text-slate-400 text-sm">No stories in this sprint yet</td></tr>
-              ) : (
-                selectedSprint.stories.map((s) => (
-                  <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50">
-                    <td className="px-4 py-2.5 text-indigo-600 font-mono text-xs">{s.id}</td>
-                    <td className="px-4 py-2.5 text-slate-700">{s.title}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[s.type] ?? "bg-gray-100 text-gray-600"}`}>{s.type}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-500">{s.sp}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{s.hours}h</td>
-                    <td className="px-4 py-2.5">
-                      <span className={s.hoursLogged >= s.hours ? "text-green-600 font-medium" : "text-slate-500"}>{s.hoursLogged}h</span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[s.status] ?? "bg-gray-100"}`}>{s.status}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-500 text-xs">{s.assignee}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          {selectedSprint.stories.length > 0 && (
-            <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex gap-6">
-              <span>Items: {selectedSprint.stories.length}</span>
-              <span>Total Est: {totalHours}h</span>
-              <span className="text-amber-600">Remaining: {remainingHours}h</span>
-              <span className="text-green-600">Logged: {loggedHours}h</span>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <button onClick={openLinkModal}
+              className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+              🔗 Link Items
+            </button>
+            <button
+              onClick={() => { setNewItem({ ...BLANK_ITEM, type: "Story" }); setShowAddItemForm(true); }}
+              className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+              + Add Story
+            </button>
+            <button
+              onClick={() => { setNewItem({ ...BLANK_ITEM, type: "Task" }); setShowAddItemForm(true); }}
+              className="px-3 py-1.5 text-sm border border-indigo-200 rounded-lg text-indigo-600 hover:bg-indigo-50">
+              + Add Task
+            </button>
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-3">
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <h4 className="font-semibold text-slate-700 mb-3 text-sm">Sprint Metrics</h4>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-500">Capacity Used</span>
-                  <span className={`font-bold ${overCapacity ? "text-red-600" : "text-slate-700"}`}>{selectedSprint.allocated}h / {selectedSprint.capacity}h</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div className={`h-2 rounded-full ${overCapacity ? "bg-red-500" : "bg-indigo-500"}`}
-                    style={{ width: `${Math.min((selectedSprint.allocated / selectedSprint.capacity) * 100, 100)}%` }} />
-                </div>
-                {overCapacity && <p className="text-xs text-red-600 mt-1 font-medium">⚠ Over capacity — reduce allocation</p>}
+        {/* Linked items summary */}
+        {(selectedSprint.linkedEpics.length > 0 || selectedSprint.linkedStories.length > 0 || selectedSprint.linkedTasks.length > 0) && (
+          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex flex-wrap gap-1.5">
+            {selectedSprint.linkedEpics.map((eid) => {
+              const epic = ALL_EPICS.find((e) => e.id === eid);
+              return epic ? (
+                <span key={eid} className="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700 border border-orange-200">🏔 {epic.title}</span>
+              ) : null;
+            })}
+            {selectedSprint.linkedStories.map((sid) => {
+              const story = ALL_STORIES.find((s) => s.id === sid);
+              return story ? (
+                <span key={sid} className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 border border-blue-200">📖 {story.id}</span>
+              ) : null;
+            })}
+            {selectedSprint.linkedTasks.map((tid) => {
+              const task = ALL_TASKS.find((t) => t.id === tid);
+              return task ? (
+                <span key={tid} className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 border border-purple-200">✓ {task.id}</span>
+              ) : null;
+            })}
+          </div>
+        )}
+
+        {/* Add Item Inline Form */}
+        {showAddItemForm && (
+          <div className="px-4 py-4 bg-indigo-50 border-b border-indigo-100 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-semibold text-indigo-700">New Sprint Item</span>
+              <select className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm bg-white"
+                value={newItem.type} onChange={(e) => setNewItem((p) => ({ ...p, type: e.target.value }))}>
+                {["Story", "Task", "Bug", "R&N", "Sub-Task"].map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input className="flex-1 min-w-48 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="Title *"
+                value={newItem.title} onChange={(e) => setNewItem((p) => ({ ...p, title: e.target.value }))}
+                onKeyDown={(e) => e.key === "Enter" && addSprintItem()} />
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs text-slate-500 shrink-0">Est. Hrs</label>
+                <input type="number" className="w-16 border border-slate-200 rounded-lg px-2 py-2 text-sm bg-white"
+                  value={newItem.hours} onChange={(e) => setNewItem((p) => ({ ...p, hours: Number(e.target.value) }))} />
               </div>
-              <div className="flex justify-between text-sm"><span className="text-slate-500">Velocity (last sprint)</span><span className="font-semibold text-slate-700">{selectedSprint.velocity} pts</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-500">Predicted velocity</span><span className="font-semibold text-indigo-600">{velocityPrediction} pts</span></div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Board Type</span>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${boardTypeStyle[selectedSprint.boardType]}`}>{selectedSprint.boardType}</span>
-              </div>
+              <input className="w-32 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="Assignee"
+                value={newItem.assignee} onChange={(e) => setNewItem((p) => ({ ...p, assignee: e.target.value }))} />
+              {newItem.type !== "Story" && (
+                <select className="border border-slate-200 rounded-lg px-2 py-2 text-sm bg-white"
+                  value={newItem.attachedStoryId} onChange={(e) => setNewItem((p) => ({ ...p, attachedStoryId: e.target.value }))}>
+                  <option value="">📎 Attach to Story…</option>
+                  {ALL_STORIES.map((s) => <option key={s.id} value={s.id}>{s.id}: {s.title.slice(0, 35)}</option>)}
+                </select>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={addSprintItem} className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">Add</button>
+              <button onClick={() => setShowAddItemForm(false)} className="px-4 py-2 bg-slate-200 text-slate-600 text-sm rounded-lg">Cancel</button>
             </div>
           </div>
+        )}
 
-          {/* Linked milestones */}
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <h4 className="font-semibold text-slate-700 mb-2 text-sm">Linked Milestones</h4>
-            {selectedSprint.linkedMilestones.length === 0 ? (
-              <p className="text-xs text-slate-400">No milestones linked</p>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-slate-400 bg-slate-50 border-b border-slate-100">
+              <th className="text-left px-4 py-2">ID</th>
+              <th className="text-left px-4 py-2">Title</th>
+              <th className="text-left px-4 py-2">Type</th>
+              <th className="text-left px-4 py-2">Est. Hrs</th>
+              <th className="text-left px-4 py-2">Logged</th>
+              <th className="text-left px-4 py-2">Status</th>
+              <th className="text-left px-4 py-2">Assignee</th>
+              <th className="text-left px-4 py-2">Attachment</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedSprint.stories.length === 0 ? (
+              <tr><td colSpan={8} className="text-center py-8 text-slate-400 text-sm">No stories in this sprint yet — click + Add Story or + Add Task</td></tr>
             ) : (
-              <div className="space-y-1.5">
-                {selectedSprint.linkedMilestones.map((m) => (
-                  <div key={m} className="flex items-center gap-2 text-xs text-slate-600">
-                    <div className="w-2 h-2 rounded-full bg-indigo-400" />{m}
-                  </div>
-                ))}
-              </div>
+              selectedSprint.stories.map((s) => (
+                <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50">
+                  <td className="px-4 py-2.5">
+                    <button
+                      onClick={() => setSelectedItem(s)}
+                      className="text-indigo-600 font-mono text-xs font-medium underline underline-offset-2 hover:text-indigo-800 cursor-pointer">
+                      {s.id}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-700">{s.title}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[s.type] ?? "bg-gray-100 text-gray-600"}`}>{s.type}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-500">{s.hours}h</td>
+                  <td className="px-4 py-2.5">
+                    <span className={s.hoursLogged >= s.hours ? "text-green-600 font-medium" : "text-slate-500"}>{s.hoursLogged}h</span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[s.status] ?? "bg-gray-100"}`}>{s.status}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-500 text-xs">{s.assignee}</td>
+                  <td className="px-4 py-2.5">
+                    {s.attachedStoryId ? (
+                      <button onClick={() => setSelectedItem(s)} className="flex items-center gap-1 text-blue-600 hover:text-blue-800">
+                        <span>📎</span>
+                        <span className="font-mono text-xs">{s.attachedStoryId}</span>
+                      </button>
+                    ) : s.type === "Story" ? (
+                      <span className="text-xs text-blue-500 font-mono">Story</span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))
             )}
-            <button onClick={openLinkModal} className="mt-2 text-xs text-indigo-600 hover:underline">Edit links →</button>
+          </tbody>
+        </table>
+        {selectedSprint.stories.length > 0 && (
+          <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex gap-6">
+            <span>Items: {selectedSprint.stories.length}</span>
+            <span>Total Est: {totalHours}h</span>
+            <span className="text-amber-600">Remaining: {remainingHours}h</span>
+            <span className="text-green-600">Logged: {loggedHours}h</span>
           </div>
+        )}
+      </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <h4 className="font-semibold text-slate-700 mb-3 text-sm">All Sprints Timeline</h4>
-            <div className="space-y-2">
-              {sprints.map((sp) => (
-                <div key={sp.id} className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${sp.status === "Active" ? "bg-green-500" : sp.status === "Completed" ? "bg-slate-300" : "bg-blue-400"}`} />
-                  <span className={`flex-1 text-xs ${sp.id === selectedSprint.id ? "font-semibold text-indigo-600" : "text-slate-500"}`}>{sp.name}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${boardTypeStyle[sp.boardType]}`}>{sp.boardType[0]}</span>
-                  <span className="text-xs text-slate-400">{sp.endDate}</span>
+      {/* ── Sprint Metrics Row (moved from sidebar) ── */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Sprint Metrics */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h4 className="font-semibold text-slate-700 mb-3 text-sm">Sprint Metrics</h4>
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-slate-500">Capacity Used</span>
+                <span className={`font-bold ${overCapacity ? "text-red-600" : "text-slate-700"}`}>{selectedSprint.allocated}h / {selectedSprint.capacity}h</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className={`h-2 rounded-full ${overCapacity ? "bg-red-500" : "bg-indigo-500"}`}
+                  style={{ width: `${Math.min((selectedSprint.allocated / selectedSprint.capacity) * 100, 100)}%` }} />
+              </div>
+              {overCapacity && <p className="text-xs text-red-600 mt-1 font-medium">⚠ Over capacity — reduce allocation</p>}
+            </div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Velocity (last sprint)</span><span className="font-semibold text-slate-700">{selectedSprint.velocity} pts</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Predicted velocity</span><span className="font-semibold text-indigo-600">{velocityPrediction} pts</span></div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Board Type</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${boardTypeStyle[selectedSprint.boardType]}`}>{selectedSprint.boardType}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Linked Milestones */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h4 className="font-semibold text-slate-700 mb-2 text-sm">Linked Milestones</h4>
+          {selectedSprint.linkedMilestones.length === 0 ? (
+            <p className="text-xs text-slate-400">No milestones linked</p>
+          ) : (
+            <div className="space-y-1.5">
+              {selectedSprint.linkedMilestones.map((m) => (
+                <div key={m} className="flex items-center gap-2 text-xs text-slate-600">
+                  <div className="w-2 h-2 rounded-full bg-indigo-400" />{m}
                 </div>
               ))}
             </div>
+          )}
+          <button onClick={openLinkModal} className="mt-2 text-xs text-indigo-600 hover:underline">Edit links →</button>
+        </div>
+
+        {/* All Sprints Timeline */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h4 className="font-semibold text-slate-700 mb-3 text-sm">All Sprints Timeline</h4>
+          <div className="space-y-2">
+            {sprints.map((sp) => (
+              <div key={sp.id} className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${sp.status === "Active" ? "bg-green-500" : sp.status === "Completed" ? "bg-slate-300" : "bg-blue-400"}`} />
+                <span className={`flex-1 text-xs ${sp.id === selectedSprint.id ? "font-semibold text-indigo-600" : "text-slate-500"}`}>{sp.name}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${boardTypeStyle[sp.boardType]}`}>{sp.boardType[0]}</span>
+                <span className="text-xs text-slate-400">{sp.endDate}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -479,7 +573,7 @@ export default function PlanningPage() {
           })}
         </div>
 
-        {/* ── Sprint Hours Bar Chart ── */}
+        {/* Sprint Hours Bar Chart */}
         <div className="bg-white rounded-xl shadow-sm p-5 mt-2">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-semibold text-slate-700 text-sm">Sprint Hours — Allocated vs Logged</h3>
@@ -529,7 +623,7 @@ export default function PlanningPage() {
           </svg>
         </div>
 
-        {/* ── Velocity Bar Chart ── */}
+        {/* Velocity Bar Chart */}
         <div className="bg-white rounded-xl shadow-sm p-5">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-semibold text-slate-700 text-sm">Sprint Velocity</h3>
@@ -592,6 +686,103 @@ export default function PlanningPage() {
           </svg>
         </div>
       </div>
+
+      {/* Item Detail Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedItem(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[520px] max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                    selectedItem.type === "Story" ? "bg-blue-100 text-blue-700 border-blue-200" :
+                    selectedItem.type === "Bug" ? "bg-red-100 text-red-700 border-red-200" :
+                    "bg-purple-100 text-purple-700 border-purple-200"
+                  }`}>{selectedItem.type}</span>
+                  <span className="text-xs text-indigo-600 font-mono font-medium">{selectedItem.id}</span>
+                </div>
+                <h2 className="font-semibold text-slate-800 text-base">{selectedItem.title}</h2>
+              </div>
+              <button onClick={() => setSelectedItem(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-slate-400 text-xs block mb-0.5">Assignee</span>
+                  <div className="font-medium text-slate-700">{selectedItem.assignee || "Unassigned"}</div>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-xs block mb-0.5">Status</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[selectedItem.status] ?? "bg-gray-100"}`}>{selectedItem.status}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-xs block mb-0.5">Hours</span>
+                  <div className="font-medium text-slate-700">{selectedItem.hoursLogged}h / {selectedItem.hours}h logged</div>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-xs block mb-0.5">Sprint</span>
+                  <div className="font-medium text-slate-700">{selectedSprint.name}</div>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-xs block mb-0.5">Board Type</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${boardTypeStyle[selectedSprint.boardType]}`}>{selectedSprint.boardType}</span>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-slate-400">Hours Progress</span>
+                  <span className="font-medium text-slate-600">{selectedItem.hours > 0 ? Math.round((selectedItem.hoursLogged / selectedItem.hours) * 100) : 0}%</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className={`h-2 rounded-full ${selectedItem.hoursLogged >= selectedItem.hours ? "bg-green-500" : "bg-indigo-500"}`}
+                    style={{ width: `${Math.min(selectedItem.hours > 0 ? (selectedItem.hoursLogged / selectedItem.hours) * 100 : 0, 100)}%` }} />
+                </div>
+              </div>
+
+              {/* Attached User Story */}
+              {selectedItem.attachedStoryId && (
+                <div>
+                  <div className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                    <span>📎</span> Attached User Story
+                  </div>
+                  <div className="flex items-start gap-3 px-3 py-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <div className="px-1.5 py-0.5 bg-blue-100 rounded text-xs font-mono text-blue-700 shrink-0 mt-0.5">{selectedItem.attachedStoryId}</div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-slate-700">
+                        {ALL_STORIES.find((s) => s.id === selectedItem.attachedStoryId)?.title ?? selectedItem.attachedStoryId}
+                      </div>
+                      <div className="text-xs text-blue-500 mt-0.5">User Story</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* If it IS a story, show its own details */}
+              {selectedItem.type === "Story" && (
+                <div>
+                  <div className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                    <span>📖</span> Story Details
+                  </div>
+                  <div className="px-3 py-3 bg-blue-50 rounded-xl border border-blue-100 text-sm text-slate-700">
+                    {(() => {
+                      const fullStory = ALL_STORIES.find((s) => s.id === selectedItem.id);
+                      return fullStory
+                        ? <div><span className="font-mono text-blue-600 text-xs">{fullStory.id}</span> · {fullStory.title}</div>
+                        : <div className="text-xs text-slate-500">{selectedItem.title}</div>;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-1 border-t border-slate-100">
+                <button onClick={() => setSelectedItem(null)} className="px-4 py-2 bg-slate-100 text-slate-600 text-sm rounded-lg hover:bg-slate-200">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Link Items Modal */}
       {showLinkModal && (

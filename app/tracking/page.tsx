@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProjectBanner from "../_components/ProjectBanner";
 
 type TimeEntry = {
@@ -7,7 +7,8 @@ type TimeEntry = {
   date: string; hours: number; user: string; comment: string; sprint: string;
 };
 
-const teamMembers = ["Rahul S.", "Priya M.", "Amit K.", "Sneha R.", "Vikram P."];
+// Base member list — augmented dynamically from actual log entries
+const BASE_MEMBERS = ["Rahul S.", "Priya M.", "Amit K.", "Sneha R.", "Vikram P."];
 
 const initialEntries: TimeEntry[] = [
   // ── Sprint 1 (total: 118h) ──────────────────────────────────────────────
@@ -88,12 +89,59 @@ const typeColors: Record<string, string> = {
   Epic: "bg-orange-100 text-orange-700", "Sub-Task": "bg-slate-100 text-slate-600",
 };
 
+type TaskEstimate = { assignee: string; estimatedHours: number; loggedHours: number };
+
 export default function TrackingPage() {
   const [entries, setEntries] = useState<TimeEntry[]>(initialEntries);
   const [showLogForm, setShowLogForm] = useState(false);
   const [newLog, setNewLog] = useState({ taskId: "", taskTitle: "", taskType: "Task", hours: 1, comment: "", user: "Rahul S.", sprint: "Sprint 4" });
   const [sprintFilter, setSprintFilter] = useState("All");
   const [userFilter, setUserFilter] = useState("All");
+  const [taskEstimates, setTaskEstimates] = useState<Record<string, TaskEstimate>>({});
+
+  // Load task estimates published by the board page
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("pm_task_estimates");
+      if (raw) setTaskEstimates(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  // Load persisted entries; if nothing saved yet, seed from initialEntries
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("pm_time_entries");
+      if (saved) {
+        setEntries(JSON.parse(saved));
+      } else {
+        // First visit — seed localStorage so salary & project-cost pages can read live data
+        const byUser: Record<string, number> = {};
+        const bySprint: Record<string, number> = {};
+        initialEntries.forEach((e) => {
+          byUser[e.user]   = (byUser[e.user]   ?? 0) + e.hours;
+          bySprint[e.sprint] = (bySprint[e.sprint] ?? 0) + e.hours;
+        });
+        localStorage.setItem("pm_time_entries",          JSON.stringify(initialEntries));
+        localStorage.setItem("pm_logged_hours_by_user",  JSON.stringify(byUser));
+        localStorage.setItem("pm_logged_hours_by_sprint",JSON.stringify(bySprint));
+      }
+    } catch {}
+  }, []);
+
+  // Persist entries + publish aggregated data for other pages
+  useEffect(() => {
+    try {
+      localStorage.setItem("pm_time_entries", JSON.stringify(entries));
+      const byUser: Record<string, number> = {};
+      const bySprint: Record<string, number> = {};
+      entries.forEach((e) => {
+        byUser[e.user] = (byUser[e.user] ?? 0) + e.hours;
+        bySprint[e.sprint] = (bySprint[e.sprint] ?? 0) + e.hours;
+      });
+      localStorage.setItem("pm_logged_hours_by_user", JSON.stringify(byUser));
+      localStorage.setItem("pm_logged_hours_by_sprint", JSON.stringify(bySprint));
+    } catch {}
+  }, [entries]);
 
   const addLog = () => {
     if (!newLog.taskTitle || !newLog.hours) return;
@@ -119,6 +167,39 @@ export default function TrackingPage() {
   const totalProjectHours = entries.reduce((a, e) => a + e.hours, 0);
   const currentSprintHours = entries.filter((e) => e.sprint === "Sprint 4").reduce((a, e) => a + e.hours, 0);
   const sprints = ["All", ...Array.from(new Set(entries.map((e) => e.sprint))).sort()];
+  // Unique members derived from actual log entries
+  const activeMembers = Array.from(new Set(entries.map((e) => e.user))).sort();
+  const teamMembers = Array.from(new Set([...BASE_MEMBERS, ...activeMembers]));
+  // Per-member hours summary
+  const memberHours = teamMembers
+    .map((m) => ({ name: m, hours: entries.filter((e) => e.user === m).reduce((a, e) => a + e.hours, 0) }))
+    .filter((m) => m.hours > 0)
+    .sort((a, b) => b.hours - a.hours);
+
+  // ── Overtime computation (per task: logged > estimated) ──
+  // Cumulative logged per taskId from all time entries
+  const taskLoggedTotals: Record<string, number> = {};
+  entries.forEach((e) => { taskLoggedTotals[e.taskId] = (taskLoggedTotals[e.taskId] ?? 0) + e.hours; });
+
+  // Per-task overtime and progress info
+  const taskOvertimeInfo: Record<string, { estimate: number; totalLogged: number; overtime: number; assignee: string }> = {};
+  Object.entries(taskEstimates).forEach(([taskId, est]) => {
+    const total = taskLoggedTotals[taskId] ?? 0;
+    taskOvertimeInfo[taskId] = {
+      estimate:    est.estimatedHours,
+      totalLogged: total,
+      overtime:    Math.max(0, Math.round((total - est.estimatedHours) * 10) / 10),
+      assignee:    est.assignee,
+    };
+  });
+
+  // Overtime per user (accumulated from all tasks)
+  const overtimeByUser: Record<string, number> = {};
+  Object.values(taskOvertimeInfo).forEach(({ overtime, assignee }) => {
+    if (overtime > 0 && assignee) {
+      overtimeByUser[assignee] = Math.round(((overtimeByUser[assignee] ?? 0) + overtime) * 10) / 10;
+    }
+  });
 
   // Per-sprint hours for breakdown (shown when a specific sprint is selected)
   const sprintBreakdown = Object.entries(SPRINT_TARGETS).map(([name, target]) => {
@@ -146,7 +227,7 @@ export default function TrackingPage() {
           { label: "Total Project Hours", value: `${totalProjectHours}h`, sub: "across all sprints", color: "bg-purple-500" },
           { label: "Current Sprint Hours", value: `${currentSprintHours}h`, sub: "Sprint 4 (active)", color: "bg-indigo-500" },
           { label: "Log Entries", value: String(entries.length), sub: "all sprints", color: "bg-emerald-500" },
-          { label: "Unique Members", value: String(new Set(entries.map((e) => e.user)).size), sub: "contributors", color: "bg-amber-500" },
+          { label: "Unique Members Logged", value: String(activeMembers.length), sub: `${activeMembers.length} of ${teamMembers.length} members have logged`, color: "bg-amber-500" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl shadow-sm p-4">
             <div className={`text-xs font-medium text-white px-2 py-0.5 rounded ${s.color} w-fit mb-2`}>{s.label}</div>
@@ -154,6 +235,51 @@ export default function TrackingPage() {
             <div className="text-xs text-slate-400 mt-0.5">{s.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* Overtime Summary per resource */}
+      {Object.keys(overtimeByUser).length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">⚠️</span>
+            <h3 className="text-sm font-semibold text-amber-800">Overtime Detected — Hours Logged Beyond Task Estimate</h3>
+            <span className="text-xs text-amber-600 ml-auto">Overtime = logged hours − estimated hours per task</span>
+          </div>
+          <div className="grid grid-cols-5 gap-3">
+            {Object.entries(overtimeByUser).map(([user, ot]) => (
+              <div key={user} className="bg-white rounded-lg px-3 py-2.5 border border-amber-100 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-amber-200 flex items-center justify-center text-xs font-bold text-amber-700 shrink-0">{user[0]}</div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-700">{user}</div>
+                  <div className="text-sm font-bold text-amber-600">{ot}h overtime</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Per-member hours summary */}
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <h3 className="text-sm font-semibold text-slate-700 mb-3">Hours Logged by Member</h3>
+        <div className="grid grid-cols-5 gap-3">
+          {memberHours.map((m) => {
+            const pct = totalProjectHours > 0 ? Math.round((m.hours / totalProjectHours) * 100) : 0;
+            return (
+              <div key={m.name} className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 shrink-0">{m.name[0]}</div>
+                  <span className="text-xs font-medium text-slate-700 truncate">{m.name}</span>
+                  <span className="ml-auto text-xs font-bold text-slate-700 shrink-0">{m.hours}h</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5">
+                  <div className="h-1.5 rounded-full bg-indigo-500" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-xs text-slate-400">{pct}% of total</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Sprint Hours Breakdown — always visible */}
@@ -237,6 +363,7 @@ export default function TrackingPage() {
               <th className="text-left px-4 py-2">Type</th>
               <th className="text-left px-4 py-2">Date</th>
               <th className="text-left px-4 py-2">Hours</th>
+              <th className="text-left px-4 py-2 text-amber-500">Task Progress vs Est.</th>
               <th className="text-left px-4 py-2">Member</th>
               <th className="text-left px-4 py-2">Sprint</th>
               <th className="text-left px-4 py-2">Comment</th>
@@ -255,6 +382,28 @@ export default function TrackingPage() {
                 </td>
                 <td className="px-4 py-2.5 text-slate-500 text-xs">{e.date}</td>
                 <td className="px-4 py-2.5"><span className="font-semibold text-slate-700">{e.hours}h</span></td>
+                <td className="px-4 py-2.5">
+                  {taskOvertimeInfo[e.taskId] ? (() => {
+                    const info = taskOvertimeInfo[e.taskId];
+                    const pct  = info.estimate > 0 ? Math.min(Math.round((info.totalLogged / info.estimate) * 100), 999) : 0;
+                    const isOT = info.overtime > 0;
+                    return (
+                      <div className="space-y-1 min-w-32">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={isOT ? "text-amber-600 font-semibold" : "text-slate-500"}>
+                            {info.totalLogged}h / {info.estimate}h est.
+                          </span>
+                          {isOT && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">+{info.overtime}h OT</span>}
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5">
+                          <div className={`h-1.5 rounded-full ${isOT ? "bg-amber-500" : pct >= 90 ? "bg-yellow-400" : "bg-green-500"}`}
+                            style={{ width: `${Math.min(pct, 100)}%` }} />
+                        </div>
+                        <div className={`text-xs ${isOT ? "text-amber-600 font-medium" : "text-slate-400"}`}>{pct}% of estimate</div>
+                      </div>
+                    );
+                  })() : <span className="text-slate-300 text-xs italic">No estimate</span>}
+                </td>
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-1.5">
                     <div className="w-6 h-6 rounded-full bg-indigo-200 flex items-center justify-center text-xs text-indigo-700 font-bold">{e.user[0]}</div>
