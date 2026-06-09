@@ -462,15 +462,17 @@ export default function OnboardingPage() {
 
         {/* Project Cost Breakdown */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-slate-700">Project Cost Breakdown</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Itemised billing — services, hours, or deliverables</p>
-            </div>
-            <button onClick={() => setShowAddBilling(true)} className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700">+ Add Line Item</button>
+          <div className="px-4 py-4 border-b border-slate-100">
+            <h3 className="font-semibold text-slate-700">Project Cost Breakdown</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Itemised billing — services, hours, or deliverables</p>
+            <button
+              onClick={() => setShowAddBilling((v) => !v)}
+              className="mt-3 px-4 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 inline-flex items-center gap-1">
+              + Add Line Item
+            </button>
           </div>
           {showAddBilling && (
-            <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100">
+            <div className="px-4 py-4 bg-indigo-50 border-b border-indigo-100 space-y-3">
               <div className="grid grid-cols-5 gap-3">
                 <input className="col-span-2 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="Description *"
                   value={newBilling.description} onChange={(e) => setNewBilling((p) => ({ ...p, description: e.target.value }))} />
@@ -483,9 +485,9 @@ export default function OnboardingPage() {
                 <input type="number" className="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="Unit Price"
                   value={newBilling.unitPrice} onChange={(e) => setNewBilling((p) => ({ ...p, unitPrice: Number(e.target.value) }))} />
               </div>
-              <div className="flex gap-2 mt-2">
-                <button onClick={addBilling} className="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg">Save</button>
-                <button onClick={() => setShowAddBilling(false)} className="px-3 py-1.5 bg-slate-200 text-slate-600 text-xs rounded-lg">Cancel</button>
+              <div className="flex gap-2">
+                <button onClick={addBilling} className="px-4 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 font-medium">Save</button>
+                <button onClick={() => setShowAddBilling(false)} className="px-4 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs rounded-lg hover:bg-slate-50">Cancel</button>
               </div>
             </div>
           )}
@@ -497,6 +499,7 @@ export default function OnboardingPage() {
                 <th className="text-right px-4 py-2">Qty / Hrs</th>
                 <th className="text-right px-4 py-2">Unit Price</th>
                 <th className="text-right px-4 py-2">Amount</th>
+                <th className="text-right px-4 py-2">% of Total</th>
                 <th className="text-center px-4 py-2">Actions</th>
               </tr>
             </thead>
@@ -513,6 +516,7 @@ export default function OnboardingPage() {
                     <td className="px-3 py-2"><input type="number" className="w-20 border border-slate-200 rounded px-2 py-1 text-xs bg-white text-right" value={editBilling.qty} onChange={(e) => setEditBilling({ ...editBilling, qty: Number(e.target.value) })} /></td>
                     <td className="px-3 py-2"><input type="number" className="w-24 border border-slate-200 rounded px-2 py-1 text-xs bg-white text-right" value={editBilling.unitPrice} onChange={(e) => setEditBilling({ ...editBilling, unitPrice: Number(e.target.value) })} /></td>
                     <td className="px-3 py-2 text-right text-xs font-semibold text-indigo-600">{fmt(editBilling.qty * editBilling.unitPrice)}</td>
+                    <td className="px-3 py-2 text-xs text-slate-400 text-right">—</td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1 justify-center">
                         <button onClick={saveBilling} className="px-2 py-1 text-xs bg-green-600 text-white rounded">Save</button>
@@ -527,6 +531,11 @@ export default function OnboardingPage() {
                     <td className="px-4 py-2.5 text-right text-slate-500">{b.qty.toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-right text-slate-500">{fmt(b.unitPrice)}</td>
                     <td className="px-4 py-2.5 text-right font-semibold text-indigo-600">{fmt(b.qty * b.unitPrice)}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="text-xs bg-indigo-50 text-indigo-600 font-semibold px-2 py-0.5 rounded-full">
+                        {subtotal > 0 ? ((b.qty * b.unitPrice / subtotal) * 100).toFixed(1) : "0"}%
+                      </span>
+                    </td>
                     <td className="px-4 py-2.5">
                       <div className="flex gap-1 justify-center">
                         <button onClick={() => setEditBilling({ ...b })} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200">Edit</button>
@@ -538,6 +547,76 @@ export default function OnboardingPage() {
               )}
             </tbody>
           </table>
+
+          {/* ── Cost Breakdown Summary ── */}
+          <div className="border-t border-slate-100 bg-slate-50 px-5 py-5 space-y-5">
+            <div className="grid grid-cols-3 gap-5">
+
+              {/* Category breakdown with bars */}
+              <div className="col-span-2 space-y-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cost by Category</p>
+                {(() => {
+                  const categoryTotals = billingItems.reduce<Record<string, number>>((acc, b) => {
+                    acc[b.category] = (acc[b.category] ?? 0) + b.qty * b.unitPrice
+                    return acc
+                  }, {})
+                  const catColors: Record<string, string> = {
+                    Development: "bg-indigo-500", Design: "bg-violet-500", Consulting: "bg-blue-500",
+                    Testing: "bg-amber-500", Support: "bg-green-500", Infrastructure: "bg-teal-500",
+                    License: "bg-purple-500", Training: "bg-rose-500", Other: "bg-slate-400",
+                  }
+                  return Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => {
+                    const pct = subtotal > 0 ? (amt / subtotal) * 100 : 0
+                    return (
+                      <div key={cat}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="font-medium text-slate-600">{cat}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-400">{pct.toFixed(1)}%</span>
+                            <span className="font-semibold text-slate-700">{fmt(amt)}</span>
+                          </div>
+                        </div>
+                        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${catColors[cat] ?? "bg-slate-400"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+
+              {/* Totals panel */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2.5 flex flex-col justify-center">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cost Summary</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Subtotal</span>
+                    <span className="font-semibold text-slate-700">{fmt(subtotal)}</span>
+                  </div>
+                  {inclusiveTax && (
+                    <div className="flex justify-between text-slate-500">
+                      <span>{taxType}</span>
+                      <span className="font-semibold">+ {fmt(taxAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-slate-100 pt-2">
+                    <span className="font-semibold text-slate-700">Grand Total</span>
+                    <span className="font-bold text-indigo-700">{fmt(grandTotal)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-dashed border-slate-200 pt-2">
+                    <span className="text-slate-500">Project Cost (entered)</span>
+                    <span className={`font-bold ${Math.abs(project.budget - grandTotal) < 1 ? "text-green-600" : "text-amber-600"}`}>{fmt(project.budget)}</span>
+                  </div>
+                  {Math.abs(project.budget - grandTotal) >= 1 && (
+                    <div className={`flex justify-between text-xs ${grandTotal > project.budget ? "text-red-500" : "text-green-600"}`}>
+                      <span>Variance</span>
+                      <span className="font-semibold">{grandTotal > project.budget ? "+" : ""}{fmt(grandTotal - project.budget)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Risk Register */}
@@ -749,8 +828,13 @@ export default function OnboardingPage() {
                 ) : (
                   <tr key={pm.id} className="border-b border-slate-50 hover:bg-slate-50">
                     <td className="px-4 py-2.5 text-slate-700 font-medium">{pm.name}</td>
-                    <td className="px-4 py-2.5 text-right"><span className="text-sm font-semibold text-slate-700">{pm.pct}%</span></td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-indigo-600">{fmt((pm.pct / 100) * grandTotal)}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">{pm.pct}%</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <p className="text-sm font-bold text-indigo-700">{fmt((pm.pct / 100) * grandTotal)}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{pm.pct}% of {fmt(grandTotal)}</p>
+                    </td>
                     <td className="px-4 py-2.5 text-slate-500 text-sm">{pm.dueDate}</td>
                     <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor[pm.status] ?? "bg-slate-100 text-slate-500"}`}>{pm.status}</span></td>
                     <td className="px-4 py-2.5">
@@ -763,8 +847,15 @@ export default function OnboardingPage() {
             <tfoot>
               <tr className="bg-slate-50 border-t-2 border-slate-200">
                 <td className="px-4 py-2.5 font-bold text-slate-700">Total</td>
-                <td className={`px-4 py-2.5 text-right font-bold text-base ${totalPaymentPct > 100 ? "text-red-600" : totalPaymentPct === 100 ? "text-green-600" : "text-amber-600"}`}>{totalPaymentPct}%</td>
-                <td className="px-4 py-2.5 text-right font-bold text-indigo-700 text-base">{fmt(grandTotal)}</td>
+                <td className="px-4 py-2.5 text-right">
+                  <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${totalPaymentPct > 100 ? "bg-red-100 text-red-600" : totalPaymentPct === 100 ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"}`}>
+                    {totalPaymentPct}% {totalPaymentPct === 100 ? "✓" : totalPaymentPct < 100 ? `· ${100 - totalPaymentPct}% left` : "· over!"}
+                  </span>
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  <p className="font-bold text-indigo-700 text-base">{fmt(grandTotal)}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Project Cost (incl. tax)</p>
+                </td>
                 <td colSpan={3} />
               </tr>
             </tfoot>

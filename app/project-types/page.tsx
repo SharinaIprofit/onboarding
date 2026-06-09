@@ -182,6 +182,13 @@ export default function ProjectTypesPage() {
 
   // ── BOT state
   const [bot, setBot] = useState({ buildCost: 2500000, operateFee: 400000, operateDuration: 12, transferFee: 500000 })
+  const [botFields, setBotFields] = useState({
+    buildDuration: "6",
+    operateDuration: "12",
+    transferTimeline: "Month 18–24",
+    ipTransferDate: "2027-06-01",
+    transitionPlan: "Knowledge transfer documentation, team handover, runbook delivery",
+  })
   const botTotal = bot.buildCost + bot.operateFee * bot.operateDuration + bot.transferFee
 
   // ── Staff Aug state
@@ -353,17 +360,51 @@ export default function ProjectTypesPage() {
                   <span className={`w-2 h-2 rounded-full ${selected.headerColor}`} />
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{selected.name} — Required fields</p>
                 </div>
-                <div className="space-y-2">
-                  {selected.keyFields.map(f => (
-                    <div key={f.label} className={`flex items-center justify-between rounded-lg px-3 py-2.5 border ${selected.color} ${selected.borderColor}`}>
-                      <span className="text-xs text-slate-700 font-semibold">{f.label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">{f.example}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${selected.pillColor}`}>Required</span>
-                      </div>
+
+                {/* BOT — editable required fields */}
+                {selected.id === "bot" ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-slate-700 font-semibold block mb-1">Build Phase Duration (months)</label>
+                      <input value={botFields.buildDuration} onChange={e => setBotFields(f => ({ ...f, buildDuration: e.target.value }))}
+                        className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:outline-none bg-orange-50" />
                     </div>
-                  ))}
-                </div>
+                    <div>
+                      <label className="text-xs text-slate-700 font-semibold block mb-1">Operate Phase Duration (months)</label>
+                      <input value={botFields.operateDuration} onChange={e => setBotFields(f => ({ ...f, operateDuration: e.target.value }))}
+                        className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:outline-none bg-orange-50" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-700 font-semibold block mb-1">Transfer Timeline</label>
+                      <input value={botFields.transferTimeline} onChange={e => setBotFields(f => ({ ...f, transferTimeline: e.target.value }))}
+                        placeholder="e.g. Month 18–24"
+                        className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:outline-none bg-orange-50" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-700 font-semibold block mb-1">IP Ownership Transfer Date</label>
+                      <input type="date" value={botFields.ipTransferDate} onChange={e => setBotFields(f => ({ ...f, ipTransferDate: e.target.value }))}
+                        className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:outline-none bg-orange-50" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-700 font-semibold block mb-1">Transition Plan</label>
+                      <textarea rows={2} value={botFields.transitionPlan} onChange={e => setBotFields(f => ({ ...f, transitionPlan: e.target.value }))}
+                        className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-orange-300 focus:outline-none bg-orange-50" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {selected.keyFields.map(f => (
+                      <div key={f.label} className={`flex items-center justify-between rounded-lg px-3 py-2.5 border ${selected.color} ${selected.borderColor}`}>
+                        <span className="text-xs text-slate-700 font-semibold">{f.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500">{f.example}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${selected.pillColor}`}>Required</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-700">
                   <strong>Note:</strong> For <strong>{selected.name}</strong>, these fields drive the billing calculation on the next tab.
                 </div>
@@ -808,45 +849,23 @@ export default function ProjectTypesPage() {
         {/* ── PHASES TAB ─────────────────────────────────────────────────── */}
         {tab === "phases" && hasPhasesTab && (
           <div className="p-6">
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Lifecycle Phases</p>
-                <div className="relative">
-                  <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-200" />
-                  <div className="space-y-3">
-                    {selected.phases.map((ph, i) => (
-                      <div key={i} className="flex items-start gap-4">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 z-10 ${selected.headerColor}`}>{i + 1}</div>
-                        <div className={`flex-1 rounded-lg px-4 py-3 border-2 ${i === 0 ? selected.borderColor + " " + selected.color : "border-slate-100 bg-slate-50"}`}>
-                          <p className="text-sm font-semibold text-slate-700">{ph}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {i === 0 ? "Project initiation, team setup, stakeholder alignment" :
-                             i === selected.phases.length - 1 ? "Final delivery, client sign-off, handover & closure" :
-                             "Active execution, reviews, client feedback & iteration"}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Lifecycle Phases</p>
+            <div className="relative max-w-xl">
+              <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-200" />
+              <div className="space-y-3">
+                {selected.phases.map((ph, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 z-10 ${selected.headerColor}`}>{i + 1}</div>
+                    <div className={`flex-1 rounded-lg px-4 py-3 border-2 ${i === 0 ? selected.borderColor + " " + selected.color : "border-slate-100 bg-slate-50"}`}>
+                      <p className="text-sm font-semibold text-slate-700">{ph}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {i === 0 ? "Project initiation, team setup, stakeholder alignment" :
+                         i === selected.phases.length - 1 ? "Final delivery, client sign-off, handover & closure" :
+                         "Active execution, reviews, client feedback & iteration"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">All Models at a Glance</p>
-                <div className="space-y-2">
-                  {MODELS.map(m => (
-                    <button key={m.id} onClick={() => handleSelect(m.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border-2 text-left transition-all ${
-                        selected.id === m.id ? `${m.color} ${m.borderColor}` : "bg-slate-50 border-slate-100 hover:border-slate-200"
-                      }`}>
-                      <span className="text-lg shrink-0">{m.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-700">{m.name}</p>
-                        <p className="text-xs text-slate-400 truncate">{m.workflow} · {m.billing}</p>
-                      </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${FLEXIBILITY_COLOR[m.flexibility]}`}>{m.flexibility}</span>
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
           </div>
