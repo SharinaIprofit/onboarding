@@ -7,6 +7,8 @@ type Item = {
   assignee: string; assignedBy?: string; description?: string;
   startDate?: string; endDate?: string; documents?: string[];
   epicId?: string; sprintId?: string;
+  sp?: number; status?: string; blocked?: boolean;
+  plannedHours?: number; actualHours?: number;
 };
 type Risk = { id: string; risk: string; impact: string; probability: string; mitigation: string; closeByDate: string; closed: boolean };
 type Milestone = { id: string; name: string; date: string; status: string; items: number };
@@ -43,15 +45,15 @@ const initialProjectResourceIds = ["res1", "res2", "res3", "res4", "res5", "res6
 const initialResources: Resource[] = GLOBAL_RESOURCE_POOL.filter(r => initialProjectResourceIds.includes(r.id));
 
 const fallbackBacklog: Item[] = [
-  { id: "E-01", title: "User Management Module",                       type: "Epic",  priority: "High",   assignee: "Rahul S.",  assignedBy: "Vikram P.", description: "Full user lifecycle management including registration, login, roles and permissions.", startDate: "2026-05-01", endDate: "2026-06-30" },
-  { id: "E-02", title: "Notification System",                          type: "Epic",  priority: "Medium", assignee: "Vikram P.", assignedBy: "Rahul S.",  description: "Email, push and in-app notification service.", startDate: "2026-06-01", endDate: "2026-07-15" },
-  { id: "S-01", title: "As a user I can register with email/password", type: "Story", priority: "High",   assignee: "Priya M.", assignedBy: "Rahul S.",  startDate: "2026-05-10", endDate: "2026-05-20", documents: [], epicId: "E-01", sprintId: "Sprint 4" },
-  { id: "S-02", title: "As a user I can login and receive JWT token",  type: "Story", priority: "High",   assignee: "Priya M.", assignedBy: "Rahul S.",  startDate: "2026-05-20", endDate: "2026-05-25", documents: [], epicId: "E-01", sprintId: "Sprint 4" },
-  { id: "T-01", title: "Setup project scaffolding and folder structure",type: "Task", priority: "Medium", assignee: "Amit K.",  assignedBy: "Vikram P.", description: "Create base folder structure per architecture doc.", startDate: "2026-05-01", endDate: "2026-05-05", epicId: "E-01", sprintId: "Sprint 4" },
-  { id: "T-02", title: "Configure CI/CD pipeline with GitHub Actions",  type: "Task", priority: "Medium", assignee: "Amit K.",  assignedBy: "Vikram P.", description: "Setup automated build, test and deploy pipeline.", startDate: "2026-05-05", endDate: "2026-05-12", epicId: "E-01", sprintId: "Sprint 4" },
-  { id: "B-01", title: "Login form doesn't validate on submit",         type: "Bug",  priority: "High",   assignee: "Sneha R.", assignedBy: "Priya M.",  epicId: "E-01", sprintId: "Sprint 4" },
-  { id: "R-01", title: "Evaluate Redis vs Memcached for caching layer", type: "R&N",  priority: "Low",    assignee: "Vikram P.",assignedBy: "Amit K.",   epicId: "E-02" },
-  { id: "S-03", title: "As admin I can manage user roles and permissions",type:"Story",priority: "Medium", assignee: "Rahul S.", assignedBy: "Vikram P.", startDate: "2026-05-28", endDate: "2026-06-10", documents: [], epicId: "E-01", sprintId: "Sprint 5" },
+  { id: "E-01", title: "User Management Module",                       type: "Epic",  priority: "High",   assignee: "Rahul S.",  assignedBy: "Vikram P.", description: "Full user lifecycle management including registration, login, roles and permissions.", startDate: "2026-05-01", endDate: "2026-06-30", sp: 40, status: "In Progress", plannedHours: 80, actualHours: 62 },
+  { id: "E-02", title: "Notification System",                          type: "Epic",  priority: "Medium", assignee: "Vikram P.", assignedBy: "Rahul S.",  description: "Email, push and in-app notification service.", startDate: "2026-06-01", endDate: "2026-07-15", sp: 24, status: "Planned", plannedHours: 48, actualHours: 0 },
+  { id: "S-01", title: "As a user I can register with email/password", type: "Story", priority: "High",   assignee: "Priya M.", assignedBy: "Rahul S.",  startDate: "2026-05-10", endDate: "2026-05-20", documents: [], epicId: "E-01", sprintId: "Sprint 4", sp: 8, status: "In Progress", plannedHours: 20, actualHours: 18 },
+  { id: "S-02", title: "As a user I can login and receive JWT token",  type: "Story", priority: "High",   assignee: "Priya M.", assignedBy: "Rahul S.",  startDate: "2026-05-20", endDate: "2026-05-25", documents: [], epicId: "E-01", sprintId: "Sprint 4", sp: 5, status: "Done", plannedHours: 12, actualHours: 12 },
+  { id: "T-01", title: "Setup project scaffolding and folder structure",type: "Task", priority: "Medium", assignee: "Amit K.",  assignedBy: "Vikram P.", description: "Create base folder structure per architecture doc.", startDate: "2026-05-01", endDate: "2026-05-05", epicId: "E-01", sprintId: "Sprint 4", sp: 3, status: "Done", plannedHours: 8, actualHours: 6 },
+  { id: "T-02", title: "Configure CI/CD pipeline with GitHub Actions",  type: "Task", priority: "Medium", assignee: "Amit K.",  assignedBy: "Vikram P.", description: "Setup automated build, test and deploy pipeline.", startDate: "2026-05-05", endDate: "2026-05-12", epicId: "E-01", sprintId: "Sprint 4", sp: 5, status: "In Progress", plannedHours: 12, actualHours: 10 },
+  { id: "B-01", title: "Login form doesn't validate on submit",         type: "Bug",  priority: "High",   assignee: "Sneha R.", assignedBy: "Priya M.",  epicId: "E-01", sprintId: "Sprint 4", sp: 2, status: "Open", blocked: true, plannedHours: 4, actualHours: 0 },
+  { id: "R-01", title: "Evaluate Redis vs Memcached for caching layer", type: "R&N",  priority: "Low",    assignee: "Vikram P.",assignedBy: "Amit K.",   epicId: "E-02", sp: 2, status: "Open", plannedHours: 8, actualHours: 0 },
+  { id: "S-03", title: "As admin I can manage user roles and permissions",type:"Story",priority: "Medium", assignee: "Rahul S.", assignedBy: "Vikram P.", startDate: "2026-05-28", endDate: "2026-06-10", documents: [], epicId: "E-01", sprintId: "Sprint 5", sp: 13, status: "To Do", plannedHours: 32, actualHours: 0 },
 ];
 
 const fallbackRisks: Risk[] = [
@@ -91,7 +93,7 @@ const milestoneStatusDot: Record<string, string> = {
   "On Track": "bg-green-500", "At Risk": "bg-amber-500", Planned: "bg-slate-300",
 };
 
-const BLANK_ITEM = { title: "", type: "Story", priority: "Medium", assignee: "", assignedBy: "", description: "", startDate: "", endDate: "", epicId: "", sprintId: "" };
+const BLANK_ITEM = { title: "", type: "Story", priority: "Medium", assignee: "", assignedBy: "", description: "", startDate: "", endDate: "", epicId: "", sprintId: "", sp: 0, status: "Open", blocked: false, plannedHours: 0, actualHours: 0 };
 const BLANK_RISK = { risk: "", impact: "Medium", probability: "Medium", mitigation: "", closeByDate: "", closed: false };
 const BLANK_RESOURCE: Omit<Resource, "id"> = { name: "", role: "", availability: "Available", capacityHours: 80, allocatedHours: 0, skills: [], currentTasks: 0 };
 
@@ -129,6 +131,12 @@ export default function ScopePage() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState<typeof BLANK_ITEM>({ ...BLANK_ITEM });
+  const [aiPanel, setAiPanel] = useState<"none" | "story" | "sprint" | "resource">("none");
+  const [aiStoryInput, setAiStoryInput] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiSprintSuggested, setAiSprintSuggested] = useState(false);
+  const [aiResourceSuggested, setAiResourceSuggested] = useState(false);
+  const [quickActionItem, setQuickActionItem] = useState<string | null>(null);
   const [filterType, setFilterType] = useState("All");
   const [wbsUploaded, setWbsUploaded] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -271,23 +279,161 @@ export default function ScopePage() {
         {seeded && <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">✓ Seeded from Project Onboarding</span>}
       </div>
 
-      {/* WBS Upload + AI */}
-      <div className="bg-white rounded-xl shadow-sm p-4 flex items-start gap-4">
-        <div className="flex-1">
-          <div className="font-semibold text-slate-700 mb-1">Upload WBS</div>
-          <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${wbsUploaded ? "border-green-400 bg-green-50" : "border-slate-200 hover:border-indigo-400"}`} onClick={() => setWbsUploaded(true)}>
-            {wbsUploaded ? <div className="text-green-600 font-medium">✓ WBS_ProjectAlpha_v2.xlsx uploaded</div>
-              : <><div className="text-2xl mb-1">📁</div><div className="text-sm text-slate-500">Click to upload WBS (.xlsx, .csv, .pdf)</div></>}
+      {/* ── Backlog Health Dashboard ── */}
+      <div className="grid grid-cols-6 gap-3">
+        {[
+          { label: "Total Epics", value: backlog.filter(i => i.type === "Epic").length, color: "bg-orange-500", icon: "🔷", sub: "epics" },
+          { label: "Stories", value: backlog.filter(i => i.type === "Story").length, color: "bg-blue-500", icon: "📖", sub: "user stories" },
+          { label: "Tasks", value: backlog.filter(i => i.type === "Task").length, color: "bg-purple-500", icon: "✓", sub: "tasks" },
+          { label: "Open Bugs", value: backlog.filter(i => i.type === "Bug").length, color: "bg-red-500", icon: "🐛", sub: "unresolved" },
+          { label: "Sprint Ready", value: backlog.filter(i => i.sprintId).length, color: "bg-indigo-500", icon: "⚡", sub: "assigned to sprint" },
+          { label: "Blocked", value: backlog.filter(i => i.blocked).length, color: "bg-rose-600", icon: "🚫", sub: "need attention" },
+        ].map(c => (
+          <div key={c.label} className="bg-white rounded-xl shadow-sm p-3.5 flex items-center gap-3">
+            <div className={`w-9 h-9 ${c.color} rounded-xl flex items-center justify-center text-white text-base shrink-0`}>{c.icon}</div>
+            <div className="min-w-0">
+              <div className="text-xl font-bold text-slate-800">{c.value}</div>
+              <div className="text-xs text-slate-500 leading-tight">{c.label}</div>
+              <div className="text-xs text-slate-400">{c.sub}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── WBS Upload + AI Features ── */}
+      <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <div className="font-semibold text-slate-700 mb-1">Upload WBS</div>
+            <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${wbsUploaded ? "border-green-400 bg-green-50" : "border-slate-200 hover:border-indigo-400"}`} onClick={() => setWbsUploaded(true)}>
+              {wbsUploaded ? <div className="text-green-600 font-medium">✓ WBS_ProjectAlpha_v2.xlsx uploaded</div>
+                : <><div className="text-2xl mb-1">📁</div><div className="text-sm text-slate-500">Click to upload WBS (.xlsx, .csv, .pdf)</div></>}
+            </div>
+          </div>
+          <div className="flex-1 space-y-2">
+            <div className="font-semibold text-slate-700 mb-1">AI Features ✨</div>
+            <button onClick={handleAIGenerate} disabled={aiLoading || !wbsUploaded} className="w-full py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              {aiLoading ? "Generating…" : "✨ Generate Tasks from WBS"}
+            </button>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { key: "story" as const, label: "AI User Story Generator", icon: "📖" },
+                { key: "sprint" as const, label: "AI Sprint Planning", icon: "🗓" },
+                { key: "resource" as const, label: "AI Resource Allocation", icon: "👥" },
+              ].map(btn => (
+                <button key={btn.key} onClick={() => setAiPanel(p => p === btn.key ? "none" : btn.key)}
+                  className={`py-2 px-2 rounded-lg border text-xs font-medium transition-colors flex flex-col items-center gap-1 ${aiPanel === btn.key ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                  <span className="text-base">{btn.icon}</span>
+                  <span className="leading-tight text-center">{btn.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="flex-1 space-y-2">
-          <div className="font-semibold text-slate-700 mb-1">AI Task Generation</div>
-          <button onClick={handleAIGenerate} disabled={aiLoading || !wbsUploaded} className="w-full py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-            {aiLoading ? "Generating…" : "✨ Generate Tasks from WBS via AI"}
-          </button>
-          <button className="w-full py-2 rounded-lg border border-slate-200 text-slate-600 text-sm hover:bg-slate-50">📊 PERT Estimation (Optional)</button>
-          <button className="w-full py-2 rounded-lg border border-slate-200 text-slate-600 text-sm hover:bg-slate-50">📝 Dev Team Separate Estimate (Optional)</button>
-        </div>
+
+        {/* AI Story Generator panel */}
+        {aiPanel === "story" && (
+          <div className="border border-violet-200 bg-violet-50 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-violet-800">📖 AI User Story Generator</span>
+              <span className="text-xs bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">Input → Epics + Stories + Tasks + AC + DoD</span>
+            </div>
+            <input value={aiStoryInput} onChange={e => setAiStoryInput(e.target.value)}
+              placeholder="Describe a module (e.g. 'User Authentication Module with email/password and OAuth')"
+              className="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-300 focus:outline-none bg-white" />
+            <button
+              onClick={() => {
+                if (!aiStoryInput.trim()) return;
+                setAiGenerating(true);
+                setTimeout(() => {
+                  setBacklog(p => [...p,
+                    { id: `AI-E${Date.now().toString().slice(-3)}`, title: aiStoryInput, type: "Epic", priority: "High", assignee: "Rahul S.", assignedBy: "", sp: 40, status: "Planned", plannedHours: 80, actualHours: 0 },
+                    { id: `AI-S${Date.now().toString().slice(-3)}`, title: `As a user I can ${aiStoryInput.toLowerCase().includes("auth") ? "register and login securely" : "use " + aiStoryInput}`, type: "Story", priority: "High", assignee: "Priya M.", assignedBy: "Rahul S.", sp: 8, status: "Open", plannedHours: 20, actualHours: 0 },
+                    { id: `AI-T${Date.now().toString().slice(-3)}`, title: `Implement ${aiStoryInput} backend API`, type: "Task", priority: "High", assignee: "Rahul S.", assignedBy: "Vikram P.", sp: 5, status: "Open", plannedHours: 12, actualHours: 0 },
+                  ]);
+                  setAiStoryInput("");
+                  setAiGenerating(false);
+                  setAiPanel("none");
+                }, 1200);
+              }}
+              disabled={aiGenerating || !aiStoryInput.trim()}
+              className="px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 disabled:opacity-50">
+              {aiGenerating ? "Generating…" : "✨ Generate Stories & Tasks"}
+            </button>
+          </div>
+        )}
+
+        {/* AI Sprint Planning panel */}
+        {aiPanel === "sprint" && (
+          <div className="border border-blue-200 bg-blue-50 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-blue-800">🗓 AI Sprint Planning</span>
+              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Based on capacity · velocity · priority</span>
+            </div>
+            {!aiSprintSuggested ? (
+              <button onClick={() => { setAiSprintSuggested(true); }}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                ✨ Auto-suggest Sprint Allocation
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-blue-700 font-medium">Suggested sprint plan based on team capacity (80h) and backlog priority:</p>
+                {[
+                  { sprint: "Sprint 4 (Active)", items: ["S-01: User registration (8 SP)", "T-01: Scaffolding (3 SP)", "T-02: CI/CD (5 SP)", "B-01: Login bug (2 SP)"], sp: 18, capacity: "76%" },
+                  { sprint: "Sprint 5", items: ["S-03: Role management (13 SP)", "R-01: Redis research (2 SP)"], sp: 15, capacity: "56%" },
+                  { sprint: "Sprint 6", items: ["S-02: JWT login (5 SP)", "E-02: Notifications planning (8 SP)"], sp: 13, capacity: "49%" },
+                ].map(sg => (
+                  <div key={sg.sprint} className="bg-white rounded-lg p-3 border border-blue-200">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs font-semibold text-slate-700">{sg.sprint}</span>
+                      <span className="text-xs text-indigo-600 font-medium">{sg.sp} SP · {sg.capacity} capacity</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {sg.items.map(item => <span key={item} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{item}</span>)}
+                    </div>
+                  </div>
+                ))}
+                <button onClick={() => setAiSprintSuggested(false)} className="text-xs text-blue-600 hover:underline">Reset</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AI Resource Allocation panel */}
+        {aiPanel === "resource" && (
+          <div className="border border-teal-200 bg-teal-50 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-teal-800">👥 AI Resource Allocation</span>
+              <span className="text-xs bg-teal-100 text-teal-600 px-2 py-0.5 rounded-full">Based on skills & workload</span>
+            </div>
+            {!aiResourceSuggested ? (
+              <button onClick={() => setAiResourceSuggested(true)}
+                className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700">
+                ✨ Suggest Resource Assignment
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-teal-700 font-medium">Recommended assignments based on skills and current workload:</p>
+                {[
+                  { role: "Frontend", name: "Priya M.", tasks: "User registration UI, Login form", reason: "React skills, low workload (1 task)", color: "bg-blue-100 text-blue-700" },
+                  { role: "Backend", name: "Rahul S.", tasks: "Auth module, API development", reason: "Node.js + Auth skills, 3 active tasks", color: "bg-indigo-100 text-indigo-700" },
+                  { role: "DevOps", name: "Amit K.", tasks: "CI/CD pipeline, Docker setup", reason: "CI/CD + AWS skills, 2 active tasks", color: "bg-amber-100 text-amber-700" },
+                  { role: "QA", name: "Meera J.", tasks: "Test automation, Bug verification", reason: "Testing skills, 0 active tasks — ideal", color: "bg-green-100 text-green-700" },
+                ].map(r => (
+                  <div key={r.role} className="bg-white rounded-lg p-3 border border-teal-200 flex items-center gap-3">
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.color} shrink-0`}>{r.role}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-semibold text-slate-700">{r.name}</span>
+                      <span className="text-xs text-slate-400 ml-2">→ {r.tasks}</span>
+                    </div>
+                    <span className="text-xs text-slate-400 italic shrink-0 hidden xl:block">{r.reason}</span>
+                  </div>
+                ))}
+                <button onClick={() => setAiResourceSuggested(false)} className="text-xs text-teal-600 hover:underline">Reset</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -393,26 +539,30 @@ export default function ScopePage() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[960px]">
+            <table className="w-full text-sm min-w-[1200px]">
               <thead>
                 <tr className="text-xs text-slate-400 bg-slate-50 border-b border-slate-100">
                   <th className="text-left px-4 py-2">ID</th>
                   <th className="text-left px-4 py-2">Title / Dates</th>
                   <th className="text-left px-4 py-2">Type</th>
                   <th className="text-left px-4 py-2">Priority</th>
+                  <th className="text-center px-3 py-2">SP</th>
+                  <th className="text-left px-3 py-2">Status</th>
+                  <th className="text-center px-3 py-2">Progress</th>
+                  <th className="text-center px-3 py-2">⚑</th>
                   <th className="text-left px-4 py-2">Epic Link</th>
                   <th className="text-left px-4 py-2">Sprint</th>
                   <th className="text-left px-4 py-2">Assignee</th>
-                  <th className="text-left px-4 py-2">Assigned By</th>
-                  <th className="text-left px-4 py-2">Attachments</th>
                   <th className="text-left px-4 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((item) => {
                   const res = resources.find(r => r.name === item.assignee);
+                  const progress = item.plannedHours && item.plannedHours > 0
+                    ? Math.min(100, Math.round((item.actualHours ?? 0) / item.plannedHours * 100)) : 0;
                   return (
-                    <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50">
+                    <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 relative group ${item.blocked ? "bg-red-50/40" : ""}`}>
                       <td className="px-4 py-2.5">
                         <button onClick={() => openEditModal(item)} className="text-indigo-600 font-mono text-xs font-medium underline underline-offset-2 hover:text-indigo-800">{item.id}</button>
                       </td>
@@ -423,6 +573,32 @@ export default function ScopePage() {
                       </td>
                       <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[item.type] ?? "bg-gray-100 text-gray-600"}`}>{item.type}</span></td>
                       <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityColors[item.priority] ?? ""}`}>{item.priority}</span></td>
+                      <td className="px-3 py-2.5 text-center">
+                        {item.sp ? <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{item.sp}</span> : <span className="text-slate-300 text-xs">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          item.status === "Done" ? "bg-green-100 text-green-700" :
+                          item.status === "In Progress" ? "bg-blue-100 text-blue-700" :
+                          item.status === "Open" ? "bg-slate-100 text-slate-600" :
+                          item.status === "To Do" ? "bg-slate-100 text-slate-500" :
+                          "bg-amber-100 text-amber-600"
+                        }`}>{item.status || "Open"}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1.5 w-20">
+                          <div className="flex-1 bg-slate-100 rounded-full h-1.5">
+                            <div className={`h-1.5 rounded-full ${progress >= 100 ? "bg-green-500" : progress > 60 ? "bg-indigo-500" : "bg-amber-400"}`} style={{ width: `${progress}%` }} />
+                          </div>
+                          <span className="text-xs text-slate-400 w-7 text-right">{progress}%</span>
+                        </div>
+                        {item.plannedHours ? <div className="text-xs text-slate-400 mt-0.5">{item.actualHours ?? 0}h/{item.plannedHours}h</div> : null}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {item.blocked
+                          ? <span className="text-red-500 font-bold text-sm" title="Blocked">🚫</span>
+                          : <span className="text-slate-200 text-xs">—</span>}
+                      </td>
                       <td className="px-4 py-2.5">
                         {item.epicId ? <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 font-mono">{item.epicId}</span>
                           : item.type === "Epic" ? <span className="text-slate-300 text-xs">—</span>
@@ -439,17 +615,32 @@ export default function ScopePage() {
                         </div>
                         {res && <div className="text-xs text-slate-400 mt-0.5">{res.role}</div>}
                       </td>
-                      <td className="px-4 py-2.5 text-slate-500 text-xs">{item.assignedBy || <span className="text-slate-300">—</span>}</td>
                       <td className="px-4 py-2.5">
-                        {item.type === "Story" ? (
-                          <button onClick={() => openEditModal(item)} className="flex items-center gap-1 text-indigo-500 hover:text-indigo-700">
-                            <span className="text-base">📎</span>
-                            <span className="text-xs font-medium">{item.documents && item.documents.length > 0 ? item.documents.length : "Attach"}</span>
+                        <div className="relative">
+                          <button onClick={() => setQuickActionItem(quickActionItem === item.id ? null : item.id)}
+                            className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200 flex items-center gap-1">
+                            Actions <span className="text-slate-400">▾</span>
                           </button>
-                        ) : <span className="text-slate-200 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <button onClick={() => openEditModal(item)} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200">Edit</button>
+                          {quickActionItem === item.id && (
+                            <div className="absolute right-0 top-7 z-20 bg-white rounded-xl shadow-lg border border-slate-200 py-1 min-w-[140px]">
+                              <button onClick={() => { openEditModal(item); setQuickActionItem(null); }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-indigo-50 hover:text-indigo-700">✏️ Edit</button>
+                              <button onClick={() => { setBacklog(p => p.map(i => i.id === item.id ? { ...i, sprintId: "Sprint 5" } : i)); setQuickActionItem(null); }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-indigo-50 hover:text-indigo-700">📦 Move to Sprint 5</button>
+                              <button onClick={() => { const clone = { ...item, id: `CLONE-${Date.now().toString().slice(-4)}`, title: `[Copy] ${item.title}` }; setBacklog(p => [...p, clone]); setQuickActionItem(null); }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-indigo-50 hover:text-indigo-700">📋 Clone</button>
+                              {item.type !== "Bug" && (
+                                <button onClick={() => { setBacklog(p => p.map(i => i.id === item.id ? { ...i, type: "Bug", priority: "High" } : i)); setQuickActionItem(null); }}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-red-50 hover:text-red-600">🐛 Convert to Bug</button>
+                              )}
+                              <button onClick={() => { setBacklog(p => p.map(i => i.id === item.id ? { ...i, blocked: !i.blocked } : i)); setQuickActionItem(null); }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-amber-50 hover:text-amber-600">{item.blocked ? "✅ Unblock" : "🚫 Mark Blocked"}</button>
+                              <div className="border-t border-slate-100 my-1" />
+                              <button onClick={() => { setBacklog(p => p.filter(i => i.id !== item.id)); setQuickActionItem(null); }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50">🗑 Archive</button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

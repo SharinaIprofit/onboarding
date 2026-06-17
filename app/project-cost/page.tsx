@@ -71,6 +71,7 @@ function getWorkingDays(yearMonth: string): number {
 export default function ProjectCostPage() {
   const [currencyCode,  setCurrencyCode]  = useState("INR");
   const [billingMonth,  setBillingMonth]  = useState("2026-05");
+  const [projectBudget, setProjectBudget] = useState(1850000);
 
   // Data loaded from localStorage (set by tracking + salary pages)
   const [hoursByUser,    setHoursByUser]    = useState<Record<string, number>>(FALLBACK_HOURS_BY_USER);
@@ -367,6 +368,80 @@ export default function ProjectCostPage() {
           <div className="text-xs text-slate-400 mt-0.5">hrs beyond task estimates × rate</div>
         </div>
       </div>
+
+      {/* ── Budget Tracking ── */}
+      {(() => {
+        const budgetSpent = totalCost;
+        const budgetRemaining = Math.max(0, projectBudget - budgetSpent);
+        const budgetPct = projectBudget > 0 ? Math.round((budgetSpent / projectBudget) * 100) : 0;
+        const projectedFinal = totalLoggedHrs > 0 && totalEstHours > 0
+          ? (budgetSpent / totalLoggedHrs) * totalEstHours
+          : projectBudget;
+        const forecastVariance = projectedFinal - projectBudget;
+        return (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-700">Budget Tracking</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Live budget vs spend — updates as hours are logged</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400">Project Budget</label>
+                <input type="number" value={projectBudget}
+                  onChange={(e) => setProjectBudget(Number(e.target.value))}
+                  className="w-36 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 font-mono" />
+              </div>
+            </div>
+            <div className="px-5 py-5 space-y-5">
+              {/* Progress bar */}
+              <div>
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="font-medium text-slate-700">Budget Utilization</span>
+                  <span className={`font-bold ${budgetPct > 90 ? "text-red-600" : budgetPct > 70 ? "text-amber-600" : "text-emerald-600"}`}>{budgetPct}%</span>
+                </div>
+                <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${budgetPct > 90 ? "bg-red-500" : budgetPct > 70 ? "bg-amber-500" : "bg-indigo-500"}`}
+                    style={{ width: `${Math.min(budgetPct, 100)}%` }} />
+                </div>
+                <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <span>₹0</span>
+                  <span>{fmt(projectBudget)}</span>
+                </div>
+              </div>
+              {/* 3 stat cards */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+                  <div className="text-xs text-indigo-500 font-medium mb-1">Total Budget</div>
+                  <div className="text-xl font-bold text-indigo-700">{fmt(projectBudget)}</div>
+                  <div className="text-xs text-indigo-400 mt-0.5">Approved project budget</div>
+                </div>
+                <div className={`rounded-xl p-4 border ${budgetPct > 90 ? "bg-red-50 border-red-100" : "bg-amber-50 border-amber-100"}`}>
+                  <div className={`text-xs font-medium mb-1 ${budgetPct > 90 ? "text-red-500" : "text-amber-500"}`}>Spent to Date</div>
+                  <div className={`text-xl font-bold ${budgetPct > 90 ? "text-red-700" : "text-amber-700"}`}>{fmt(budgetSpent)}</div>
+                  <div className={`text-xs mt-0.5 ${budgetPct > 90 ? "text-red-400" : "text-amber-400"}`}>{budgetPct}% of total budget</div>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                  <div className="text-xs text-emerald-500 font-medium mb-1">Remaining</div>
+                  <div className="text-xl font-bold text-emerald-700">{fmt(budgetRemaining)}</div>
+                  <div className="text-xs text-emerald-400 mt-0.5">{100 - budgetPct}% left</div>
+                </div>
+              </div>
+              {/* Forecast */}
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm ${forecastVariance > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
+                <span className="text-lg">{forecastVariance > 0 ? "⚠️" : "✅"}</span>
+                <div>
+                  <span className={`font-semibold ${forecastVariance > 0 ? "text-red-700" : "text-green-700"}`}>
+                    Projected Final Cost: {fmt(projectedFinal)}
+                  </span>
+                  <span className={`ml-2 text-xs ${forecastVariance > 0 ? "text-red-500" : "text-green-500"}`}>
+                    ({forecastVariance > 0 ? "+" : ""}{fmt(forecastVariance)} vs budget)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Resource Cost Breakdown ── */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">

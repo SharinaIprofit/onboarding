@@ -687,6 +687,76 @@ export default function PlanningPage() {
         </div>
       </div>
 
+      {/* ── Capacity Planner ── */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <h2 className="font-semibold text-slate-700">Capacity Planner</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Per-member sprint capacity vs allocation — overallocation highlighted in red</p>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-slate-500 uppercase tracking-wide bg-slate-50">
+              <th className="px-5 py-3 text-left">Member</th>
+              <th className="px-5 py-3 text-left">Role</th>
+              <th className="px-5 py-3 text-center">Capacity (h)</th>
+              <th className="px-5 py-3 text-center">Allocated (h)</th>
+              <th className="px-5 py-3 text-center">Available (h)</th>
+              <th className="px-5 py-3 text-left">Utilization</th>
+              <th className="px-5 py-3 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { name: "Rahul S.",  role: "Backend Lead",    capacity: 80, allocated: 72 },
+              { name: "Priya M.",  role: "Frontend Dev",    capacity: 80, allocated: 60 },
+              { name: "Amit K.",   role: "DevOps Engineer", capacity: 80, allocated: 54 },
+              { name: "Sneha R.",  role: "UI/UX Designer",  capacity: 80, allocated: 80 },
+              { name: "Vikram P.", role: "Full Stack Dev",  capacity: 80, allocated: 66 },
+              { name: "Meera J.",  role: "QA Engineer",     capacity: 80, allocated: 44 },
+            ].map((m, i) => {
+              const avail = m.capacity - m.allocated;
+              const pct = Math.round((m.allocated / m.capacity) * 100);
+              const over = m.allocated > m.capacity;
+              const warn = pct >= 90;
+              return (
+                <tr key={m.name} className={`border-t border-slate-50 ${i % 2 === 0 ? "" : "bg-slate-50/50"} ${over ? "bg-red-50" : ""}`}>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${over ? "bg-red-100 text-red-700" : "bg-indigo-100 text-indigo-700"}`}>{m.name[0]}</div>
+                      <span className="font-medium text-slate-800">{m.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-slate-500">{m.role}</td>
+                  <td className="px-5 py-3 text-center font-mono text-slate-700">{m.capacity}h</td>
+                  <td className={`px-5 py-3 text-center font-mono font-semibold ${over ? "text-red-600" : warn ? "text-amber-600" : "text-slate-700"}`}>{m.allocated}h</td>
+                  <td className={`px-5 py-3 text-center font-mono ${avail <= 0 ? "text-red-500" : "text-emerald-600"}`}>{avail}h</td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${over ? "bg-red-500" : warn ? "bg-amber-400" : "bg-indigo-500"}`}
+                          style={{ width: `${Math.min(pct, 100)}%` }} />
+                      </div>
+                      <span className={`text-xs font-medium w-9 text-right ${over ? "text-red-600" : warn ? "text-amber-600" : "text-slate-600"}`}>{pct}%</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${over ? "bg-red-100 text-red-700" : warn ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
+                      {over ? "Overloaded" : warn ? "Near Full" : "OK"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {/* Overallocation warning */}
+        {[80, 72, 66, 60, 54, 44].some((a, i) => a > 80) === false && (
+          <div className="px-5 py-3 border-t border-slate-50 bg-amber-50">
+            <p className="text-xs text-amber-700 font-medium">⚠ Rahul S. and Sneha R. are at or near full capacity — consider redistributing tasks before sprint start.</p>
+          </div>
+        )}
+      </div>
+
       {/* Item Detail Modal */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedItem(null)}>

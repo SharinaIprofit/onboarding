@@ -21,7 +21,7 @@ type Epic = { id: string; title: string; description: string; startDate: string;
 type Story = { id: string; title: string; epicId: string; status: string };
 type Milestone = { id: string; name: string; date: string; status: string };
 
-const DEFAULT_WORKFLOW = ["To Do", "In Progress", "Review", "Testing", "Reopen", "Done", "Closed"];
+const DEFAULT_WORKFLOW = ["Backlog Ready", "To Do", "In Progress", "Code Review", "QA Done", "Testing", "Reopen", "Done", "Closed"];
 
 const EPICS: Epic[] = [
   { id: "E-01", title: "User Management Module", description: "Full user lifecycle management including registration, login, roles and permissions.", startDate: "2026-05-01", endDate: "2026-06-30", status: "In Progress" },
@@ -67,13 +67,16 @@ const typeColors: Record<string, string> = {
 const priorityDot: Record<string, string> = { High: "bg-red-500", Medium: "bg-amber-400", Low: "bg-green-400" };
 
 const STATUS_STYLES: Record<string, { bg: string; header: string; text: string }> = {
-  "To Do":       { bg: "bg-slate-50 border-slate-200",   header: "bg-slate-400",   text: "text-slate-600" },
-  "In Progress": { bg: "bg-blue-50 border-blue-200",     header: "bg-blue-500",    text: "text-blue-700" },
-  "Review":      { bg: "bg-purple-50 border-purple-200", header: "bg-purple-500",  text: "text-purple-700" },
-  "Testing":     { bg: "bg-amber-50 border-amber-200",   header: "bg-amber-500",   text: "text-amber-700" },
-  "Reopen":      { bg: "bg-red-50 border-red-200",       header: "bg-red-500",     text: "text-red-700" },
-  "Done":        { bg: "bg-green-50 border-green-200",   header: "bg-green-500",   text: "text-green-700" },
-  "Closed":      { bg: "bg-gray-50 border-gray-300",     header: "bg-gray-600",    text: "text-gray-700" },
+  "Backlog Ready": { bg: "bg-sky-50 border-sky-200",       header: "bg-sky-500",     text: "text-sky-700" },
+  "To Do":         { bg: "bg-slate-50 border-slate-200",   header: "bg-slate-400",   text: "text-slate-600" },
+  "In Progress":   { bg: "bg-blue-50 border-blue-200",     header: "bg-blue-500",    text: "text-blue-700" },
+  "Code Review":   { bg: "bg-violet-50 border-violet-200", header: "bg-violet-500",  text: "text-violet-700" },
+  "QA Done":       { bg: "bg-emerald-50 border-emerald-200", header: "bg-emerald-500", text: "text-emerald-700" },
+  "Review":        { bg: "bg-purple-50 border-purple-200", header: "bg-purple-500",  text: "text-purple-700" },
+  "Testing":       { bg: "bg-amber-50 border-amber-200",   header: "bg-amber-500",   text: "text-amber-700" },
+  "Reopen":        { bg: "bg-red-50 border-red-200",       header: "bg-red-500",     text: "text-red-700" },
+  "Done":          { bg: "bg-green-50 border-green-200",   header: "bg-green-500",   text: "text-green-700" },
+  "Closed":        { bg: "bg-gray-50 border-gray-300",     header: "bg-gray-600",    text: "text-gray-700" },
 };
 function getStatusStyle(status: string) {
   return STATUS_STYLES[status] ?? { bg: "bg-slate-50 border-slate-200", header: "bg-slate-500", text: "text-slate-600" };
