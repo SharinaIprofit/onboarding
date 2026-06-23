@@ -139,6 +139,7 @@ export default function ScopePage() {
   const [quickActionItem, setQuickActionItem] = useState<string | null>(null);
   const [filterType, setFilterType] = useState("All");
   const [wbsUploaded, setWbsUploaded] = useState(false);
+  const [wbsFromCRM, setWbsFromCRM] = useState<{ source: string; wonProjectId: string; itemCount: number } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [pertPanel, setPertPanel] = useState(false);
   const [pertItems, setPertItems] = useState<Record<string, { o: number; m: number; p: number }>>(
@@ -197,19 +198,38 @@ export default function ScopePage() {
     try {
       const p = JSON.parse(raw);
       if (seedTs && seedTs >= p.initiatedAt) return;
-      const epics: Item[] = (p.milestones ?? []).map((m: { name: string; deliverable: string; dueDate: string }, i: number) => ({
-        id: `E-${String(i + 1).padStart(2, "0")}`, title: m.name, type: "Epic", priority: "High",
-        assignee: p.projectManager ?? "", assignedBy: "",
-        description: m.deliverable, startDate: p.startDate ?? "", endDate: m.dueDate,
-      }));
-      const billingCategoryTasks: Item[] = [];
-      const seen = new Set<string>();
-      (p.billingItems ?? []).forEach((b: { category: string; description: string }, i: number) => {
-        if (seen.has(b.category)) return;
-        seen.add(b.category);
-        billingCategoryTasks.push({ id: `T-${String(i + 1).padStart(2, "0")}`, title: b.description, type: "Task", priority: "Medium", assignee: p.technicalLead ?? "", assignedBy: p.projectManager ?? "", startDate: p.startDate ?? "", endDate: p.endDate ?? "", epicId: epics[0]?.id ?? "" });
-      });
-      setBacklog([...epics, ...billingCategoryTasks]);
+      // If project came from Won Projects (has wbsItems), use those directly
+      if (p.wbsItems && p.wbsItems.length > 0) {
+        const wbsBacklog: Item[] = (p.wbsItems as { id: string; code: string; title: string; type: string; hours: number; category: string }[]).map((w) => ({
+          id: w.id,
+          title: w.title,
+          type: w.type as string,
+          priority: "Medium",
+          assignee: p.projectManager ?? "",
+          assignedBy: "",
+          description: `${w.category} · WBS code: ${w.code}`,
+          startDate: p.startDate ?? "",
+          endDate: p.endDate ?? "",
+          plannedHours: w.hours,
+        }));
+        setBacklog(wbsBacklog);
+        setWbsUploaded(true);
+        setWbsFromCRM({ source: p.source ?? "CRM", wonProjectId: p.wonProjectId ?? "", itemCount: p.wbsItems.length });
+      } else {
+        const epics: Item[] = (p.milestones ?? []).map((m: { name: string; deliverable: string; dueDate: string }, i: number) => ({
+          id: `E-${String(i + 1).padStart(2, "0")}`, title: m.name, type: "Epic", priority: "High",
+          assignee: p.projectManager ?? "", assignedBy: "",
+          description: m.deliverable, startDate: p.startDate ?? "", endDate: m.dueDate,
+        }));
+        const billingCategoryTasks: Item[] = [];
+        const seen = new Set<string>();
+        (p.billingItems ?? []).forEach((b: { category: string; description: string }, i: number) => {
+          if (seen.has(b.category)) return;
+          seen.add(b.category);
+          billingCategoryTasks.push({ id: `T-${String(i + 1).padStart(2, "0")}`, title: b.description, type: "Task", priority: "Medium", assignee: p.technicalLead ?? "", assignedBy: p.projectManager ?? "", startDate: p.startDate ?? "", endDate: p.endDate ?? "", epicId: epics[0]?.id ?? "" });
+        });
+        setBacklog([...epics, ...billingCategoryTasks]);
+      }
       const scopeRisks: Risk[] = (p.risks ?? []).map((r: { id: string; description: string; impact: string; probability: string; mitigation: string; status: string }) => ({ id: r.id, risk: r.description, impact: r.impact, probability: r.probability, mitigation: r.mitigation, closeByDate: "", closed: riskStatusToClosed(r.status), preSales: true }));
       if (scopeRisks.length) setRisks(scopeRisks);
       const scopeMilestones: Milestone[] = (p.milestones ?? []).map((m: { id: string; name: string; dueDate: string; status: string }) => ({ id: m.id, name: m.name, date: m.dueDate, status: msStatus(m.status), items: 0 }));
@@ -316,24 +336,31 @@ export default function ScopePage() {
         <div className="flex items-start gap-4">
           <div className="flex-1">
             <div className="font-semibold text-slate-700 mb-1">Upload WBS</div>
-            <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${wbsUploaded ? "border-green-400 bg-green-50" : "border-slate-200 hover:border-indigo-400"}`} onClick={() => {
-              setWbsUploaded(true);
-              // Auto-generate PERT estimates from plannedHours (O=0.6×, M=1×, P=1.5×)
-              setPertItems(prev => {
-                const next = { ...prev };
-                backlog.forEach(item => {
-                  if (item.plannedHours && item.plannedHours > 0) {
-                    const m = item.plannedHours;
-                    next[item.id] = { o: Math.round(m * 0.6), m, p: Math.round(m * 1.5) };
-                  }
+            {wbsFromCRM ? (
+              <div className="border-2 border-green-400 bg-green-50 rounded-lg p-4 text-center">
+                <div className="text-2xl mb-1">🔗</div>
+                <div className="text-green-700 font-semibold text-sm">WBS from {wbsFromCRM.source}</div>
+                <div className="text-green-600 text-xs mt-0.5">{wbsFromCRM.itemCount} items auto-imported · {wbsFromCRM.wonProjectId}</div>
+              </div>
+            ) : (
+              <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${wbsUploaded ? "border-green-400 bg-green-50" : "border-slate-200 hover:border-indigo-400"}`} onClick={() => {
+                setWbsUploaded(true);
+                setPertItems(prev => {
+                  const next = { ...prev };
+                  backlog.forEach(item => {
+                    if (item.plannedHours && item.plannedHours > 0) {
+                      const m = item.plannedHours;
+                      next[item.id] = { o: Math.round(m * 0.6), m, p: Math.round(m * 1.5) };
+                    }
+                  });
+                  return next;
                 });
-                return next;
-              });
-              setPertPanel(true);
-            }}>
-              {wbsUploaded ? <div className="text-green-600 font-medium">✓ WBS_ProjectAlpha_v2.xlsx uploaded</div>
-                : <><div className="text-2xl mb-1">📁</div><div className="text-sm text-slate-500">Click to upload WBS (.xlsx, .csv, .pdf)</div></>}
-            </div>
+                setPertPanel(true);
+              }}>
+                {wbsUploaded ? <div className="text-green-600 font-medium">✓ WBS_ProjectAlpha_v2.xlsx uploaded</div>
+                  : <><div className="text-2xl mb-1">📁</div><div className="text-sm text-slate-500">Click to upload WBS (.xlsx, .csv, .pdf)</div></>}
+              </div>
+            )}
           </div>
           <div className="flex-1 space-y-2">
             <div className="font-semibold text-slate-700 mb-1">AI Features ✨</div>

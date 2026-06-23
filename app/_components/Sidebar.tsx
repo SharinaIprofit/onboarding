@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const nav = [
-  { href: "/onboarding", label: "Project Onboarding", icon: "🏆", group: "CRM" },
+  { href: "/won-projects", label: "Won Projects",      icon: "🎯", group: "CRM" },
+  { href: "/onboarding",   label: "Project Onboarding", icon: "🏆", group: "CRM" },
   { href: "/project-types", label: "Project Type Guide", icon: "🗂", group: "CRM" },
   { href: "/", label: "Dashboard", icon: "⊞", group: "Project" },
   { href: "/executive", label: "Executive Dashboard", icon: "📈", group: "Project" },
