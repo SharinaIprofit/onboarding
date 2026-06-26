@@ -20,7 +20,7 @@ const CRM_PREFILL = {
   dealStage: "Closed Won",
 };
 
-const PROJECT_TYPES = ["Fixed Price", "Time & Material", "Retainer", "Milestone-Based", "Hybrid"];
+const PROJECT_TYPES = ["Fixed Price", "Time & Material", "Bot Development", "SaaS", "Retainer", "Milestone-Based", "Hybrid"];
 const CURRENCIES = ["INR ₹", "USD $", "EUR €", "GBP £", "AED د.إ"];
 const TAX_TYPES = ["GST 18%", "GST 12%", "GST 5%", "VAT 5%", "VAT 15%", "Service Tax", "Withholding Tax", "Tax Exempt"];
 const PAYMENT_TERMS = ["Net 15", "Net 30", "Net 45", "Net 60", "Advance 100%", "50% Advance + 50% on Delivery", "Milestone-Based"];
